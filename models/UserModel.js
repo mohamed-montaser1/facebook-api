@@ -47,6 +47,42 @@ const userSchema = new mongoose.Schema({
     required: [true, "password is required"],
     minLength: [8, "password must be at least 8 characters"],
   },
+  friends: {
+    type: [String],
+    ref: "User",
+    default: [],
+  },
+  posts: {
+    type: [String],
+    ref: "Post",
+    default: [],
+  },
+  profilePicture: {
+    type: String,
+    default: "https://placehold.co/100",
+  },
+  coverPicture: {
+    type: String,
+    default: "https://placehold.co/1000x300",
+  },
+  phoneNumber: {
+    type: String,
+    default: "",
+  },
+  following: {
+    type: [String],
+    ref: "User",
+    default: [],
+  },
+  followers: {
+    type: [String],
+    ref: "User",
+    default: [],
+  },
+  images: {
+    type: [String],
+    default: [],
+  },
 });
 
 userSchema.set("toJSON", {
