@@ -59,11 +59,11 @@ const userSchema = new mongoose.Schema({
   },
   profilePicture: {
     type: String,
-    default: "https://placehold.co/100",
+    default: "https://placehold.co/100?text=Profile%20Picture",
   },
   coverPicture: {
     type: String,
-    default: "https://placehold.co/1000x300",
+    default: "https://placehold.co/1000x300?text=Account%20Cover",
   },
   phoneNumber: {
     type: String,
@@ -87,8 +87,8 @@ const userSchema = new mongoose.Schema({
 
 userSchema.set("toJSON", {
   versionKey: false,
-  transform: function (doc, ret) {
-    ret.id = doc._id;
+  transform: function (_, ret) {
+    ret.id = ret._id.toString();
     delete ret._id;
     return ret;
   },

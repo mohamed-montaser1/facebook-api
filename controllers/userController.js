@@ -3,6 +3,12 @@ const bcrypt = require("bcrypt");
 
 // DONE
 exports.signup = async (req, res) => {
+  if (req.user) {
+    return res
+      .status(400)
+      .json({ status: "fail", message: "You are already logged in" });
+  }
+
   const user = await User.findOne({ email: req.body.email });
   if (user) {
     return res.status(400).json({
