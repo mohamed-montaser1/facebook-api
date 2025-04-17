@@ -47,7 +47,21 @@ exports.updatePost = async (req, res) => {
   }
 };
 
-exports.deletePost = (req, res) => {};
+exports.deletePost = async (req, res) => {
+  try {
+    await Post.findOneAndDelete(req.params.id);
+    return res.status(200).json({
+      status: "success",
+      message: "post has been deleted successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "fail",
+      message: error.message,
+      error,
+    });
+  }
+};
 
 // Check if the user have permissions to manipulate posts or create ones
 exports.checkPermissions = async (req, res, next) => {

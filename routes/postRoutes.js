@@ -10,5 +10,11 @@ router.patch(
   controllers.checkPermissions,
   controllers.updatePost
 );
+router.delete(
+  "/:id",
+  userControllers.checkUserLogin,
+  controllers.checkPermissions,
+  controllers.deletePost
+);
 
 module.exports = router;
