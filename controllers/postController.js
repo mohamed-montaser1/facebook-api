@@ -1,5 +1,5 @@
 const Post = require("../models/PostModel");
-const User = require("../models/UserModel");
+const { User } = require("../models/UserModel");
 
 exports.createPost = async (req, res) => {
   if (!req.user) {

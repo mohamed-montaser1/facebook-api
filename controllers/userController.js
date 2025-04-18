@@ -1,4 +1,6 @@
-const User = require("../models/UserModel");
+const { isValidObjectId } = require("mongoose");
+const { User, FriendRequest } = require("../models/UserModel");
+const { requireLogin, acceptFriendRequestDirectly } = require("../utils/auth");
 const bcrypt = require("bcrypt");
 
 // DONE
@@ -18,14 +20,22 @@ exports.signup = async (req, res) => {
   }
 
   try {
-    const userPassword = await bcrypt.hash(req.body.password, 10);
-    const user = await User.create({
-      ...req.body,
-      password: userPassword,
+    const { name, username, birthday, gender, email, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = await User.create({
+      name,
+      username,
+      birthday,
+      gender,
+      email,
+      password: hashedPassword,
     });
+    const { password: _, ...userData } = newUser.toObject();
     return res.status(200).json({
       status: "success",
-      data: user,
+      data: {
+        user: userData,
+      },
     });
   } catch (error) {
     return res.status(500).json({
@@ -83,12 +93,14 @@ exports.login = async (req, res) => {
 
     return res.status(200).json({
       status: "success",
-      data: "User created successfully",
+      message: "User Logged In",
+      data: { user: req.user },
     });
   } else {
     return res.status(401).json({
       status: "fail",
-      data: "Authentication failed. Double-check your login details.",
+      message: "Authentication failed. Double-check your login details.",
+      data: null,
     });
   }
 };
@@ -96,26 +108,205 @@ exports.login = async (req, res) => {
 // DONE
 exports.getUser = async (req, res) => {
   const username = req.params.username;
-  if (req.user === null) {
-    return res.status(401).json({
-      status: "fail",
-      data: "You are not logged in",
-    });
-  }
+
+  if (requireLogin(req, res)) return;
 
   const user = await User.findOne({ username }).select("-password");
 
   if (!user) {
+    res.set("Cache-Control", "public, max-age=3600");
     return res.status(404).json({
       status: "fail",
       data: "User not found",
     });
   }
 
+  res.set("Cache-Control", "public, max-age=3600");
   return res.status(200).json({
     status: "success",
     data: {
       user,
     },
   });
+};
+
+exports.sendFriendRequest = async (req, res) => {
+  if (requireLogin(req, res)) return;
+
+  const { friendId } = req.body;
+  if (!isValidObjectId(friendId)) {
+    return res.status(400).json({
+      status: "fail",
+      data: "Invalid friendId",
+    });
+  }
+  const friend = await User.findById(friendId);
+  if (!friend) {
+    return res.status(404).json({
+      status: "fail",
+      message: "Friend not found",
+    });
+  }
+
+  // Already Friends
+  if (friend.friends.includes(req.user.id)) {
+    return res.status(400).json({
+      status: "fail",
+      message: "You are already friends",
+    });
+  }
+
+  if (req.user.friends.includes(friendId)) {
+    return res.status(400).json({
+      status: "fail",
+      message: "You are already friends",
+    });
+  }
+
+  const requestExist = await FriendRequest.findOne({
+    sender: req.user.id,
+    receiver: friendId,
+  });
+
+  if (requestExist) {
+    return res.status(400).json({
+      status: "fail",
+      message: "You have already sent a friend request",
+    });
+  }
+
+  const reversedRequestExist = await FriendRequest.findOne({
+    sender: friendId,
+    receiver: req.user.id,
+  });
+
+  if (reversedRequestExist) {
+    return acceptFriendRequestDirectly(res, reversedRequestExist);
+  }
+
+  try {
+    const friendRequest = await FriendRequest.create({
+      sender: req.user.id,
+      receiver: friendId,
+    });
+    return res.status(201).json({
+      status: "success",
+      data: {
+        friendRequest,
+      },
+      message: "friend request sent successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "fail",
+      message: error.message,
+      error,
+    });
+  }
+};
+
+// DONE
+exports.acceptFriendRequest = async (req, res) => {
+  if (requireLogin(req, res)) return;
+  const { id: friendRequestId } = req.params;
+
+  try {
+    const friendRequest = req.friendRequest;
+
+    // Add Receiver To The Sender Friend List
+    await User.findByIdAndUpdate(friendRequest.sender, {
+      $addToSet: { friends: friendRequest.receiver },
+    });
+    // Add Sender To The Receiver Friend List
+    await User.findByIdAndUpdate(friendRequest.receiver, {
+      $addToSet: { friends: friendRequest.sender },
+    });
+
+    await FriendRequest.findByIdAndDelete(friendRequestId);
+
+    return res.status(200).json({
+      status: "success",
+      message: "friend request accepted",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "fail",
+      message: error.message,
+      error,
+    });
+  }
+};
+
+exports.checkFriendRequestExist = async (req, res, next) => {
+  const { id } = req.params;
+  const friendRequest = await FriendRequest.findById(id);
+  if (!friendRequest) {
+    return res.status(404).json({
+      status: "fail",
+      message: "Friend request not found",
+    });
+  }
+
+  req.friendRequest = friendRequest;
+
+  next();
+};
+
+// DONE
+exports.rejectFriendRequest = async (req, res) => {
+  if (requireLogin(req, res)) return;
+
+  await req.friendRequest.deleteOne();
+
+  return res.status(200).json({
+    status: "success",
+    data: null,
+    message: "friend request rejected",
+  });
+};
+
+exports.getFriends = async (req, res) => {
+  if (requireLogin(req, res)) return;
+  const user = await User.findById(req.user.id).populate(
+    "friends",
+    "-password"
+  );
+
+  return res.status(200).json({
+    status: "success",
+    data: {
+      friends: user.friends,
+    },
+  });
+};
+
+exports.getFriendRequests = async (req, res) => {
+  if (requireLogin(req, res)) return;
+
+  try {
+    const friendRequests = await FriendRequest.find({ receiver: req.user.id });
+    return res.status(200).json({
+      status: "success",
+      message: `Friend Requests (${friendRequests.length})`,
+      data: {
+        friendRequests,
+        count: friendRequests.length,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "fail",
+      message: "Error fetching friend requests",
+      error,
+    });
+  }
+};
+
+// In Progress
+exports.explore = async (req, res) => {
+  if (requireLogin(req, res)) return;
+  const posts = await User.findById(req.user.id)
+    .populate("friends")
+    .populate("posts");
+  return res.status(200).json({ status: "success", data: posts });
 };

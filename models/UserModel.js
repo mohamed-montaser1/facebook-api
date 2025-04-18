@@ -48,12 +48,12 @@ const userSchema = new mongoose.Schema({
     minLength: [8, "password must be at least 8 characters"],
   },
   friends: {
-    type: [String],
+    type: [mongoose.Schema.Types.ObjectId],
     ref: "User",
     default: [],
   },
   posts: {
-    type: [String],
+    type: [mongoose.Schema.Types.ObjectId],
     ref: "Post",
     default: [],
   },
@@ -70,12 +70,12 @@ const userSchema = new mongoose.Schema({
     default: "",
   },
   following: {
-    type: [String],
+    type: [mongoose.Schema.Types.ObjectId],
     ref: "User",
     default: [],
   },
   followers: {
-    type: [String],
+    type: [mongoose.Schema.Types.ObjectId],
     ref: "User",
     default: [],
   },
@@ -90,10 +90,47 @@ userSchema.set("toJSON", {
   transform: function (_, ret) {
     ret.id = ret._id.toString();
     delete ret._id;
+    delete ret.__v;
+    delete ret.password;
+    return ret;
+  },
+});
+
+const friendRequestSchema = new mongoose.Schema(
+  {
+    sender: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+    },
+    receiver: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+    },
+    status: {
+      type: String,
+      enum: ["pending", "accepted", "rejected"],
+      default: "pending",
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+friendRequestSchema.set("toJSON", {
+  versionKey: false,
+  transform: function (doc, ret) {
+    ret.id = ret._id.toString();
+    delete ret._id;
+    delete ret.__v;
     return ret;
   },
 });
 
 const User = mongoose.model("User", userSchema);
 
-module.exports = User;
+const FriendRequest = mongoose.model("FriendRequest", friendRequestSchema);
+
+exports.User = User;
+
+exports.FriendRequest = FriendRequest;
