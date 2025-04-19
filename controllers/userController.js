@@ -105,6 +105,15 @@ exports.login = async (req, res) => {
   }
 };
 
+exports.logout = async (req, res) => {
+  res.clearCookie("user");
+  return res.status(200).json({
+    status: "success",
+    message: "logout done",
+    data: null,
+  });
+};
+
 // DONE
 exports.getUser = async (req, res) => {
   const username = req.params.username;

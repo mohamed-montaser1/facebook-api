@@ -16,6 +16,12 @@ router.get(
   controllers.checkUserExist,
   controllers.login
 );
+router.get(
+  "/logout",
+  loginLimiter,
+  controllers.checkUserLogin,
+  controllers.logout
+);
 
 router.get("/explore", controllers.checkUserLogin, controllers.explore);
 router.get(
@@ -56,6 +62,6 @@ router.get(
   "/friend-requests",
   controllers.checkUserLogin,
   controllers.getFriendRequests
-)
+);
 
 module.exports = router;
