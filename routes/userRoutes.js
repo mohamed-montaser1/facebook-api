@@ -65,4 +65,11 @@ router.get(
   controllers.getFriendRequests
 );
 
+router.post("/follow/:id", controllers.checkUserLogin, controllers.followUser);
+router.post(
+  "/unfollow/:id",
+  controllers.checkUserLogin,
+  controllers.unfollowUser
+);
+
 module.exports = router;

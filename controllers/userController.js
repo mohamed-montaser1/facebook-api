@@ -300,6 +300,103 @@ exports.getFriendRequests = async (req, res) => {
   }
 };
 
+exports.followUser = async (req, res) => {
+  if (requireLogin(req, res)) return;
+  const target = req.params.id;
+  const newFollower = req.user.id;
+
+  if (!isValidObjectId(target)) {
+    return res.status(400).json({
+      status: "fail",
+      message: "invalid target id",
+    });
+  }
+  if (!isValidObjectId(newFollower)) {
+    return res.status(400).json({
+      status: "fail",
+      message: "invalid newFollower id",
+    });
+  }
+
+  const targetUser = await User.findById(target);
+  if (!targetUser) {
+    return res.status(404).json({
+      status: "fail",
+      message: "target user not found",
+    });
+  }
+  if (targetUser.id === newFollower) {
+    return res.status(400).json({
+      status: "fail",
+      message: "you cannot follow yourself",
+    });
+  }
+  if (targetUser.followers.includes(newFollower)) {
+    return res.status(400).json({
+      status: "fail",
+      message: "you are already following this user",
+    });
+  }
+  await User.findByIdAndUpdate(target, {
+    $addToSet: { followers: newFollower },
+  });
+  await User.findByIdAndUpdate(newFollower, {
+    $addToSet: { following: target },
+  });
+  return res.status(200).json({
+    status: "success",
+    message: "you are now following this user",
+  });
+};
+
+exports.unfollowUser = async (req, res) => {
+  if (requireLogin(req, res)) return;
+  const target = req.params.id;
+  const follower = req.user.id;
+  if (!isValidObjectId(target)) {
+    return res.status(400).json({
+      status: "fail",
+      message: "invalid target id",
+    });
+  }
+  if (!isValidObjectId(follower)) {
+    return res.status(400).json({
+      status: "fail",
+      message: "invalid follower id",
+    });
+  }
+  const targetUser = await User.findById(target);
+  if (!targetUser) {
+    return res.status(404).json({
+      status: "fail",
+      message: "target user not found",
+    });
+  }
+  if (targetUser.id === follower) {
+    return res.status(400).json({
+      status: "fail",
+      message: "you cannot unfollow yourself",
+    });
+  }
+  if (!targetUser.followers.includes(follower)) {
+    return res.status(400).json({
+      status: "fail",
+      message: "you are not following this user",
+    });
+  }
+
+  await User.findByIdAndUpdate(target, {
+    $pull: { followers: follower },
+  });
+  await User.findByIdAndUpdate(follower, {
+    $pull: { following: target },
+  });
+  return res.status(200).json({
+    status: "success",
+    message: "you are now unfollowing this user",
+  });
+};
+
 // In Progress
 exports.explore = async (req, res) => {
   if (requireLogin(req, res)) return;
