@@ -72,4 +72,10 @@ router.post(
   controllers.unfollowUser
 );
 
+router.patch(
+  "/update-profile",
+  controllers.checkUserLogin,
+  controllers.updateProfileBasicInfo
+);
+
 module.exports = router;

@@ -300,6 +300,7 @@ exports.getFriendRequests = async (req, res) => {
   }
 };
 
+// DONE
 exports.followUser = async (req, res) => {
   if (requireLogin(req, res)) return;
   const target = req.params.id;
@@ -349,6 +350,7 @@ exports.followUser = async (req, res) => {
   });
 };
 
+// DONE
 exports.unfollowUser = async (req, res) => {
   if (requireLogin(req, res)) return;
   const target = req.params.id;
@@ -395,6 +397,42 @@ exports.unfollowUser = async (req, res) => {
     status: "success",
     message: "you are now unfollowing this user",
   });
+};
+
+// DONE
+exports.updateProfileBasicInfo = async (req, res) => {
+  if (requireLogin(req, res)) return;
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    return res.status(404).json({
+      status: "fail",
+      message: "user not found",
+    });
+  }
+  const { name, profilePicture, coverPicture, phoneNumber, bio } = req.body;
+
+  try {
+    await User.findByIdAndUpdate(req.user.id, {
+      $set: {
+        name,
+        profilePicture,
+        coverPicture,
+        phoneNumber,
+        bio,
+      },
+    });
+
+    return res.status(200).json({
+      status: "success",
+      message: "profile updated",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "fail",
+      message: error.message,
+      error,
+    });
+  }
 };
 
 // In Progress

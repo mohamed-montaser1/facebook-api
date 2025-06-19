@@ -65,6 +65,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: "https://placehold.co/1000x300?text=Account%20Cover",
   },
+  bio: {
+    type: String,
+    default: "",
+  },
   phoneNumber: {
     type: String,
     default: "",
