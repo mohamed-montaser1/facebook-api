@@ -69,7 +69,7 @@ exports.checkPermissions = async (req, res, next) => {
   if (!post) {
     return res.status(404).json({ status: "fail", message: "Post not found" });
   }
-  const author = post.author;
+  const author = post.author.toString();
   const user = req.user;
 
   if (user.id !== author) {
