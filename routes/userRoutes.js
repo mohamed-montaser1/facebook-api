@@ -78,4 +78,10 @@ router.patch(
   controllers.updateProfileBasicInfo
 );
 
+router.patch(
+  "/update-username",
+  controllers.checkUserLogin,
+  controllers.updateUserName
+);
+
 module.exports = router;

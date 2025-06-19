@@ -435,6 +435,59 @@ exports.updateProfileBasicInfo = async (req, res) => {
   }
 };
 
+exports.updateUserName = async (req, res) => {
+  if (requireLogin(req, res)) return;
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    return res.status(404).json({
+      status: "fail",
+      message: "user not found",
+    });
+  }
+  const { username } = req.body;
+  if (!username) {
+    return res.status(400).json({
+      status: "fail",
+      message: "username is required",
+    });
+  }
+  if (username.length < 3) {
+    return res.status(400).json({
+      status: "fail",
+      message: "username must be at least 3 characters long",
+    });
+  }
+  if (username.length > 20) {
+    return res.status(400).json({
+      status: "fail",
+      message: "username must be less than 20 characters long",
+    });
+  }
+  const regex = /^[a-zA-Z0-9_]+$/;
+  if (!regex.test(username)) {
+    return res.status(400).json({
+      status: "fail",
+      message: "username can only contain letters, numbers and underscores",
+    });
+  }
+  const usernameExist = await User.findOne({ username });
+  if (usernameExist) {
+    return res.status(400).json({
+      status: "fail",
+      message: "username already exists",
+    });
+  }
+  await User.findByIdAndUpdate(req.user.id, {
+    $set: {
+      username,
+    },
+  });
+  return res.status(200).json({
+    status: "success",
+    message: "username updated",
+  });
+};
+
 // In Progress
 exports.explore = async (req, res) => {
   if (requireLogin(req, res)) return;
