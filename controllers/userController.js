@@ -3,6 +3,51 @@ const { User, FriendRequest } = require("../models/UserModel");
 const { requireLogin, acceptFriendRequestDirectly } = require("../utils/auth");
 const bcrypt = require("bcrypt");
 
+// MIDDLEWARES
+// DONE
+exports.checkUserLogin = async (req, res, next) => {
+  // Getting The User
+  const userId = req.cookies.user;
+  let user = await User.findById(userId);
+
+  if (!user) {
+    req.user = null;
+    return next();
+  }
+
+  req.user = user;
+  return next();
+};
+
+// DONE
+exports.checkUserExist = async (req, res, next) => {
+  const user = await User.findOne({ email: req.body.email });
+  if (!user) {
+    req.user = null;
+    return next();
+  }
+
+  req.user = user;
+  return next();
+};
+
+// DONE
+exports.checkFriendRequestExist = async (req, res, next) => {
+  const { id } = req.params;
+  const friendRequest = await FriendRequest.findById(id);
+  if (!friendRequest) {
+    return res.status(404).json({
+      status: "fail",
+      message: "Friend request not found",
+    });
+  }
+
+  req.friendRequest = friendRequest;
+
+  next();
+};
+
+// CONTROLLERS
 // DONE
 exports.signup = async (req, res) => {
   console.log({ user: req.user });
@@ -48,33 +93,6 @@ exports.signup = async (req, res) => {
 };
 
 // DONE
-exports.checkUserLogin = async (req, res, next) => {
-  // Getting The User
-  const userId = req.cookies.user;
-  let user = await User.findById(userId);
-
-  if (!user) {
-    req.user = null;
-    return next();
-  }
-
-  req.user = user;
-  return next();
-};
-
-// DONE
-exports.checkUserExist = async (req, res, next) => {
-  const user = await User.findOne({ email: req.body.email });
-  if (!user) {
-    req.user = null;
-    return next();
-  }
-
-  req.user = user;
-  return next();
-};
-
-// DONE
 exports.login = async (req, res) => {
   // USER DOESN'T EXIST
   if (req.user === null) {
@@ -116,31 +134,6 @@ exports.logout = async (req, res) => {
   });
 };
 
-// DONE
-exports.getUser = async (req, res) => {
-  const username = req.params.username;
-
-  if (requireLogin(req, res)) return;
-
-  const user = await User.findOne({ username }).select("-password");
-
-  if (!user) {
-    res.set("Cache-Control", "public, max-age=3600");
-    return res.status(404).json({
-      status: "fail",
-      data: "User not found",
-    });
-  }
-
-  res.set("Cache-Control", "public, max-age=3600");
-  return res.status(200).json({
-    status: "success",
-    data: {
-      user,
-    },
-  });
-};
-
 exports.sendFriendRequest = async (req, res) => {
   if (requireLogin(req, res)) return;
 
@@ -156,6 +149,13 @@ exports.sendFriendRequest = async (req, res) => {
     return res.status(404).json({
       status: "fail",
       message: "Friend not found",
+    });
+  }
+
+  if (friend.id === req.user.id) {
+    return res.status(400).json({
+      status: "fail",
+      message: "You cannot send a friend request to yourself",
     });
   }
 
@@ -248,21 +248,6 @@ exports.acceptFriendRequest = async (req, res) => {
   }
 };
 
-exports.checkFriendRequestExist = async (req, res, next) => {
-  const { id } = req.params;
-  const friendRequest = await FriendRequest.findById(id);
-  if (!friendRequest) {
-    return res.status(404).json({
-      status: "fail",
-      message: "Friend request not found",
-    });
-  }
-
-  req.friendRequest = friendRequest;
-
-  next();
-};
-
 // DONE
 exports.rejectFriendRequest = async (req, res) => {
   if (requireLogin(req, res)) return;
@@ -295,7 +280,9 @@ exports.getFriendRequests = async (req, res) => {
   if (requireLogin(req, res)) return;
 
   try {
-    const friendRequests = await FriendRequest.find({ receiver: req.user.id });
+    const friendRequests = await FriendRequest.find({
+      receiver: req.user._id,
+    }).select("-receiver");
     return res.status(200).json({
       status: "success",
       message: `Friend Requests (${friendRequests.length})`,

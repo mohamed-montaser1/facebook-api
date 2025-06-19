@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const controllers = require("../controllers/userController");
 const { default: rateLimit } = require("express-rate-limit");
+const { getUser } = require("../utils/userUtility");
 
 const loginLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
@@ -32,7 +33,7 @@ router.get(
     max: 30,
   }),
   controllers.checkUserLogin,
-  controllers.getUser
+  getUser
 );
 router
   .route("/friends")
