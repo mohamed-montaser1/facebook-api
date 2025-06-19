@@ -16,7 +16,7 @@ router.get(
   controllers.checkUserExist,
   controllers.login
 );
-router.get(
+router.post(
   "/logout",
   loginLimiter,
   controllers.checkUserLogin,

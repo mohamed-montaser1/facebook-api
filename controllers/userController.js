@@ -5,6 +5,7 @@ const bcrypt = require("bcrypt");
 
 // DONE
 exports.signup = async (req, res) => {
+  console.log({ user: req.user });
   if (req.user) {
     return res
       .status(400)
@@ -49,8 +50,8 @@ exports.signup = async (req, res) => {
 // DONE
 exports.checkUserLogin = async (req, res, next) => {
   // Getting The User
-  const username = req.cookies.user;
-  let user = await User.findOne({ username });
+  const userId = req.cookies.user;
+  let user = await User.findById(userId);
 
   if (!user) {
     req.user = null;
@@ -89,7 +90,7 @@ exports.login = async (req, res) => {
   );
 
   if (isValidPassword) {
-    res.cookie("user", req.user.username, { maxAge: 1000 * 60 * 60 * 24 * 5 }); // maxAge is 5 days
+    res.cookie("user", req.user.id, { maxAge: 1000 * 60 * 60 * 24 * 5 }); // maxAge is 5 days
 
     return res.status(200).json({
       status: "success",
@@ -107,6 +108,7 @@ exports.login = async (req, res) => {
 
 exports.logout = async (req, res) => {
   res.clearCookie("user");
+  req.user = null;
   return res.status(200).json({
     status: "success",
     message: "logout done",
