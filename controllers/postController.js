@@ -5,12 +5,14 @@ exports.createPost = async (req, res) => {
   if (!req.user) {
     return res.status(401).send({ status: "fail", message: "Unauthorized" });
   }
-  const { content, images } = req.body;
   try {
+    const { content } = req.body;
     const post = await Post.create({
       author: req.user.id,
       content,
-      images,
+      images: req.files.map(
+        (file) => `http://localhost:${process.env.PORT}/images/${file.filename}`
+      ),
     });
     await User.findByIdAndUpdate(req.user.id, {
       $push: {
