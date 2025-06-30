@@ -38,7 +38,7 @@ const userSchema = new mongoose.Schema({
     validate: [validateEmail, "Please fill a valid email address"],
     match: [emailRegExp, "Please fill a valid email address"],
   },
-  activatedEmail: {
+  isVerified: {
     type: Boolean,
     default: false,
   },

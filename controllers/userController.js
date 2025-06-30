@@ -2,6 +2,8 @@ const { isValidObjectId } = require("mongoose");
 const { User, FriendRequest } = require("../models/UserModel");
 const { requireLogin, acceptFriendRequestDirectly } = require("../utils/auth");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const { sendEmail } = require("../utils/emailsFunctionality");
 
 // MIDDLEWARES
 // DONE
@@ -82,6 +84,88 @@ exports.signup = async (req, res) => {
       data: {
         user: userData,
       },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "fail",
+      message: error.message,
+      error,
+    });
+  }
+};
+
+exports.verifyEmail = async (req, res) => {
+  if (req.user) {
+    return res.status(400).json({
+      status: "fail",
+      message: "You are already logged in",
+    });
+  }
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({
+      status: "fail",
+      message: "Email is required",
+    });
+  }
+  const user = await User.findOne({ email });
+  if (!user) {
+    return res.status(404).json({
+      status: "fail",
+      message: "No user found with this email",
+    });
+  }
+  if (user.isVerified) {
+    return res.status(400).json({
+      status: "fail",
+      message: "Email already verified",
+    });
+  }
+  const token = jwt.sign({ email }, process.env.JWT_SECRET, {
+    expiresIn: "1h",
+  });
+  const link = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
+  const mailOptions = {
+    email,
+    subject: "Verify your email",
+    text: `Click the link to verify your email: ${link}`,
+  };
+  try {
+    await sendEmail(mailOptions);
+    return res.status(200).json({
+      status: "success",
+      message: "Email sent",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "fail",
+      message: error.message,
+      error,
+    });
+  }
+};
+
+exports.verifyEmailToken = async (req, res) => {
+  const { token } = req.body;
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  const user = await User.findOne({ email: decoded.email });
+  if (!user) {
+    return res.status(404).json({
+      status: "fail",
+      message: "No user found with this email",
+    });
+  }
+  if (user.isVerified) {
+    return res.status(400).json({
+      status: "fail",
+      message: "Email already verified",
+    });
+  }
+  try {
+    await User.findByIdAndUpdate(user.id, { isVerified: true });
+    return res.status(200).json({
+      status: "success",
+      message: "Email verified",
     });
   } catch (error) {
     return res.status(500).json({

@@ -11,6 +11,8 @@ const loginLimiter = rateLimit({
 });
 
 router.post("/signup", controllers.checkUserLogin, controllers.signup);
+router.post("/signup/verify-email", controllers.checkUserLogin, controllers.verifyEmail);
+router.post("/verify-email-token", controllers.checkUserLogin, controllers.verifyEmailToken);
 router.get(
   "/login",
   loginLimiter,
