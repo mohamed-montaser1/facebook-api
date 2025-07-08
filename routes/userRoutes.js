@@ -86,4 +86,6 @@ router.patch(
   controllers.updateUserName
 );
 
+router.patch("/update-password", controllers.checkUserLogin, controllers.updatePassword);
+
 module.exports = router;

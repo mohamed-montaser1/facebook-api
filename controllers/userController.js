@@ -572,6 +572,42 @@ exports.updateUserName = async (req, res) => {
   });
 };
 
+exports.updatePassword = async (req, res) => {
+  if (requireLogin(req, res)) return;
+  const user = await User.findById(req.user.id);
+  if (!user) {
+    return res.status(404).json({
+      status: "fail",
+      message: "user not found",
+    });
+  }
+
+  const { oldPassword, newPassword } = req.body;
+  if (!oldPassword || !newPassword) {
+    return res.status(400).json({
+      status: "fail",
+      message: "old password and new password are required",
+    });
+  }
+  const isValidPassword = await bcrypt.compare(oldPassword, user.password);
+  if (!isValidPassword) {
+    return res.status(400).json({
+      status: "fail",
+      message: "old password is incorrect",
+    });
+  }
+  const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+  await User.findByIdAndUpdate(req.user.id, {
+    $set: {
+      password: hashedNewPassword,
+    },
+  });
+  return res.status(200).json({
+    status: "success",
+    message: "password updated",
+  });
+};
+
 // In Progress
 exports.explore = async (req, res) => {
   if (requireLogin(req, res)) return;
